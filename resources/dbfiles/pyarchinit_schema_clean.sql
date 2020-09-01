@@ -3,7 +3,7 @@ SELECT pg_catalog.set_config('search_path', 'public', false);
 CREATE EXTENSION postgis;
 
 SET default_tablespace = '';
-SET default_with_oids = false;
+----SET default_with_oids = false;
 
 
 --
@@ -859,7 +859,7 @@ CREATE TABLE public.pyarchinit_inventario_materiali (
 
 ALTER TABLE public.pyarchinit_inventario_materiali OWNER TO postgres;
 
-SET default_with_oids = true;
+--SET default_with_oids = true;
 
 
 --
@@ -877,7 +877,7 @@ CREATE SEQUENCE public.pyarchinit_linee_rif_gid_seq
 
 ALTER TABLE public.pyarchinit_linee_rif_gid_seq OWNER TO postgres;
 
-SET default_with_oids = false;
+--SET default_with_oids = false;
 
 --
 -- TOC entry 343 (class 1259 OID 32780)
@@ -1948,13 +1948,13 @@ ALTER SEQUENCE public.us_table_id_us_seq OWNED BY public.us_table.id_us;
 -- Name: us_table_toimp; Type: TABLE; Schema: public; Owner: postgres
 --
 --------------------------------------------------------------------------------------
----CREATE SEQUENCE public.pyarchinit_reperti_gid_seq
----   START WITH 1
- ---   INCREMENT BY 1
- ---   NO MINVALUE
- --   NO MAXVALUE
- --   CACHE 1;
---ALTER TABLE public.pyarchinit_reperti_gid_seq OWNER TO postgres;
+CREATE SEQUENCE public.pyarchinit_reperti_gid_seq
+START WITH 1
+INCREMENT BY 1
+NO MINVALUE
+NO MAXVALUE
+CACHE 1;
+ALTER TABLE public.pyarchinit_reperti_gid_seq OWNER TO postgres;
 
 --ALTER SEQUENCE public.pyarchinit_reperti_gid_seq OWNED BY public.pyarchinit_reperti_gid_seq.id_rep;
 
@@ -2344,7 +2344,7 @@ ALTER TABLE ONLY public.riipartizione_territoriale_to_rip_terr ALTER COLUMN id_r
 -- TOC entry 4595 (class 2604 OID 66374)
 -- Name: riipartizione_territoriale_to_rip_terr id_rel_rip_ter_pk; Type: DEFAULT; Schema: public; Owner: postgres
 --
---ALTER TABLE ONLY public.pyarchinit_reperti ALTER COLUMN gid SET DEFAULT nextval('public.pyarchinit_reperti_gid_seq'::regclass);
+ALTER TABLE ONLY public.pyarchinit_reperti ALTER COLUMN gid SET DEFAULT nextval('public.pyarchinit_reperti_gid_seq'::regclass);
 
 --
 -- TOC entry 4570 (class 2604 OID 33176)
@@ -3077,6 +3077,86 @@ CREATE INDEX sidx_riipartizione_territoriale_geom ON public.riipartizione_territ
 -- Dependencies: 20
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
 --
+CREATE OR REPLACE FUNCTION delete_media_table()
+  RETURNS trigger AS
+$BODY$
+
+BEGIN
+IF OLD.id_media!=OLD.id_media THEN
+update media_table set id_media=OLD.id_media;
+
+else 
+
+DELETE from media_table 
+where id_media = OLD.id_media ;
+end if;
+RETURN OLD;
+END;
+
+
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+ALTER FUNCTION delete_media_table()
+  OWNER TO postgres; 
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'delete_media_table') THEN
+        CREATE TRIGGER delete_media_table
+		  AFTER UPDATE OR DELETE
+		  ON media_thumb_table
+		  FOR EACH ROW
+		  EXECUTE PROCEDURE delete_media_table();
+
+    END IF;
+END
+$$;  
+  
+ ---------------------------------------------------------------------------  
+CREATE OR REPLACE FUNCTION delete_media_to_entity_table()
+  RETURNS trigger AS
+$BODY$
+
+
+
+
+
+
+BEGIN
+IF OLD.id_media!=OLD.id_media THEN
+update media_to_entity_table set id_media=OLD.id_media;
+
+else 
+
+DELETE from media_to_entity_table 
+where id_media = OLD.id_media ;
+end if;
+RETURN OLD;
+END;
+
+
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+ALTER FUNCTION delete_media_to_entity_table()
+  OWNER TO postgres;
+
+ 
+ 
+ 
+ DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'delete_media_to_entity_table') THEN
+        CREATE TRIGGER delete_media_to_entity_table
+  AFTER UPDATE OR DELETE
+  ON media_thumb_table
+  FOR EACH ROW
+  EXECUTE PROCEDURE delete_media_to_entity_table();
+
+    END IF;
+END
+$$;  
 
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
 REVOKE ALL ON SCHEMA public FROM postgres;

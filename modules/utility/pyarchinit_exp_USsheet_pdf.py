@@ -22,6 +22,8 @@
 
 import datetime
 from datetime import date
+from numpy import *
+import io
 
 from builtins import object
 from builtins import range
@@ -29,14 +31,14 @@ from builtins import str
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import (A4)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch, cm, mm
+from reportlab.lib.units import inch, cm, mm 
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, PageBreak, SimpleDocTemplate, Spacer, TableStyle, Image
 from reportlab.platypus.paragraph import Paragraph
-
+from ..db.pyarchinit_conn_strings import Connection
 from .pyarchinit_OS_utility import *
-
-
+from PIL import Image as giggino
+from reportlab.lib.utils import ImageReader
 class NumberedCanvas_USsheet(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         canvas.Canvas.__init__(self, *args, **kwargs)
@@ -215,7 +217,9 @@ class single_US_pdf_sheet(object):
         self.provenienza_materiali_usm = data[93]
         self.criteri_distinzione_usm = data[94]
         self.uso_primario_usm = data[95]
-
+        # self.foto=data[96]
+        # self.unitatipo = data[97]
+        # self.thumbanil = data[98]
     def unzip_componenti(self):
         org = eval(self.componenti_organici)
         inorg = eval(self.componenti_inorganici)
@@ -1490,11 +1494,18 @@ class single_US_pdf_sheet(object):
         quadrato = Paragraph("<b>QUADRATO/I</b><br/>" + self.quad_par, styNormal)
         quote = Paragraph("<b>QUOTE</b><br/>min: " + self.quota_min + "<br/>max: "+self.quota_max, styNormal)
         label_unita_stratigrafica = Paragraph("<b>UNITÀ STRATIGRAFICA</b><br/>"+ str(self.us), styNormal)
-
-        label_NAT = Paragraph("<i>NAT.</i>", styNormal)                       #manca valore
-        label_ART = Paragraph("<i>ART.</i>", styNormal)                       #manca valore
-
-        #4 row
+        
+        
+        if self.formazione == 'Naturale':
+            label_NAT = Paragraph("<i>NAT.</i><br/>" + self.formazione, styNormal)
+            label_ART = Paragraph("<i>ART.</i>",  styNormal) 
+        elif self.formazione == 'Artificiale':
+            label_NAT = Paragraph("<i>NAT.</i>", styNormal)
+            label_ART = Paragraph("<i>ART.</i><br/>"+ self.formazione, styNormal)
+        elif self.formazione !='Naturale' or 'Artificiale':    
+            label_NAT = Paragraph("<i>NAT.</i><br/>", styNormal)
+            label_ART = Paragraph("<i>ART.</i>",  styNormal) 
+        
 
         piante = Paragraph("<b>PIANTE</b><br/>" + self.piante_iccd, styNormal)
         sezioni = Paragraph("<b>SEZIONI</b><br/>" + self.sezioni_iccd, styNormal)
@@ -1571,8 +1582,8 @@ class single_US_pdf_sheet(object):
 
         label_sequenza_stratigrafica = Paragraph("<b>S<br/>E<br/>Q<br/>U<br/>E<br/>N<br/>Z<br/>A<br/><br/>S<br/>T<br/>R<br/>A<br/>T<br/>I<br/>G<br/>R<br/>A<br/>F<br/>I<br/>C<br/>A</b>", styVerticale)
 
-        posteriore_a = Paragraph("<b>POSTERIORE A</b><br/>", styNormal)               # manca valore
-        anteriore_a = Paragraph("<b>ANTERIORE A</b><br/>", styNormal)                 # manca valore
+        posteriore_a = Paragraph("<b>POSTERIORE A</b><br/>" + self.copre +"<br/>" + self.riempie +"<br/>"+  self.taglia+ "<br/>" +   self.si_appoggia_a, styNormal)               # manca valore
+        anteriore_a = Paragraph("<b>ANTERIORE A</b><br/>"+ self.coperto_da +"<br/>"+  self.riempito_da +"<br/>"+ self.tagliato_da +  "<br/>" + self.gli_si_appoggia, styNormal)                 # manca valore
 
         #23 row
 
@@ -1589,7 +1600,7 @@ class single_US_pdf_sheet(object):
         #26 row
 
         datazione_ipotesi = Paragraph("<b>DATAZIONE</b><br/>" + str(self.datazione), styNormal)
-        periodo_o_fase = Paragraph("<b>PERIODO O FASE</b><br/>Periodo iniziale: "+self.periodo_iniziale+"<br/>Periodo finale: "+self.periodo_finale+"<br/>Fase iniziale: "+self.fase_iniziale+"<br/>Fase finale: "+self.fase_finale, styNormal)
+        periodo_o_fase = Paragraph("<b>PERIODO O FASE</b><br/>Periodo iniziale: "+self.periodo_iniziale+"<br/>Fase iniziale: "+self.fase_iniziale+"<br/>Periodo finale: "+self.periodo_finale+"<br/>Fase finale: "+self.fase_finale, styNormal)
 
         #27 row
 
@@ -1864,9 +1875,16 @@ class single_US_pdf_sheet(object):
         quadrato = Paragraph("<b>SQUARE</b><br/>" + self.quad_par, styNormal)
         quote = Paragraph("<b>ELEVATION</b><br/>min: " + self.quota_min + "<br/>max: "+self.quota_max, styNormal)
         label_unita_stratigrafica = Paragraph("<b>STRATIGRAPHIC UNIT</b><br/>"+ str(self.us), styNormal)
-        label_NAT = Paragraph("<i>NAT.</i>", styNormal)                       #manca valore
-        label_ART = Paragraph("<i>ART.</i>", styNormal)                       #manca valore
-
+        
+        if self.formazione== 'Natural':
+            label_NAT = Paragraph("<i>NAT.</i><br/>" + self.formazione, styNormal)
+            label_ART = Paragraph("<i>ART.</i>",  styNormal) 
+        elif self.formazione== 'Artificial':
+            label_NAT = Paragraph("<i>NAT.</i>", styNormal)
+            label_ART = Paragraph("<i>ART.</i><br/>"+ self.formazione, styNormal)
+        elif self.formazione !='Natural' or 'Artificial':    
+            label_NAT = Paragraph("<i>NAT.</i><br/>", styNormal)
+            label_ART = Paragraph("<i>ART.</i>",  styNormal) 
         #4 row
 
         piante = Paragraph("<b>MAP</b><br/>" + self.piante, styNormal)
@@ -1927,8 +1945,8 @@ class single_US_pdf_sheet(object):
 
         label_sequenza_stratigrafica = Paragraph("<b>S<br/>E<br/>Q<br/>U<br/>E<br/>N<br/>C<br/>E<br/><br/>S<br/>T<br/>R<br/>A<br/>T<br/>I<br/>G<br/>R<br/>A<br/>P<br/>H<br/>I<br/>C</b>", styVerticale)
 
-        posteriore_a = Paragraph("<b>POSTERIOR TO</b><br/>", styNormal)               # manca valore
-        anteriore_a = Paragraph("<b>ANTERIOR TO</b><br/>", styNormal)                 # manca valore
+        posteriore_a = Paragraph("<b>POSTERIOR TO</b><br/>"+ self.copre +"<br/>" + self.riempie +"<br/>"+  self.taglia+ "<br/>" +   self.si_appoggia_a, styNormal)               # manca valore
+        anteriore_a = Paragraph("<b>ANTERIOR TO</b><br/>"+ self.coperto_da +"<br/>"+  self.riempito_da +"<br/>"+ self.tagliato_da +  "<br/>" + self.gli_si_appoggia, styNormal)                 # manca valore
 
         #23 row
 
@@ -1945,7 +1963,7 @@ class single_US_pdf_sheet(object):
         #26 row
 
         datazione_ipotesi = Paragraph("<b>DATATION</b><br/>" + str(self.datazione), styNormal)
-        periodo_o_fase = Paragraph("<b>PERIOD OR PHASE</b><br/>Beginning Periodo: "+self.periodo_iniziale+"<br/>Final Period: "+self.periodo_finale+"<br/>Beginning Phase: "+self.fase_iniziale+"<br/>Finale Phase: "+self.fase_finale, styNormal)
+        periodo_o_fase = Paragraph("<b>PERIOD OR PHASE</b><br/>Beginning Period: "+self.periodo_iniziale+"<br/>Beginning Phase: "+self.fase_iniziale+"<br/>Final Period: "+self.periodo_finale+"<br/>Finale Phase: "+self.fase_finale, styNormal)
 
         #27 row
 
@@ -1982,7 +2000,7 @@ class single_US_pdf_sheet(object):
             [unita_tipo, '01' , label_catalogo_generale, '03', '04', '05', '06', label_catalogo_internazionale , '08', '09', '10', '11', '12', logo , '14', '15', '16', '17'],
             ['00', '01', catalogo_generale, '03', '04' , '05', '06', catalogo_internazionale , '08', '09', '10', '11', '12', sop, '14', '15', '16', '17'],
             [sito, '01', '02', '03', '04', anno_di_scavo , area, settore, '08', quadrato, '10', quote, '12', '13', label_unita_stratigrafica, '15', '16', '17'],
-            ['00', '01', '02', '03', '04', '05','06' , '07', '08', '09', '10', '11', '12', '13', label_NAT, '15', label_ART, '17'],    #
+            #['00', '01', '02', '03', '04', '05','06' , '07', '08', '09', '10', '11', '12', '13', label_NAT, '15', label_ART, '17'],    #
             [piante, '01', '02', sezioni, '04', '05', prospetti, '07', '08', foto, '10', '11', '12', '13', tabelle_materiali, '15', '16', '17'],
             [d_stratigrafica, '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17'],
             [criteri_distinzione, '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17'],
@@ -2019,17 +2037,17 @@ class single_US_pdf_sheet(object):
             ('SPAN', (0, 0), (1, 1)),  # unita tipo
             ('VALIGN', (0, 0), (1, 1), 'MIDDLE'),
 
-            ('SPAN', (2, 0), (6, 0)),  # label n. catalogo generale
-            ('SPAN', (7, 0), (12, 0)),  # label n. catalogo internazionale
-            ('VALIGN', (2, 0), (12, 0), 'TOP'),
+            ('SPAN', (2, 0), (6, 1)),  # label n. catalogo generale
+            ('SPAN', (7, 0), (12, 1)),  # label n. catalogo internazionale
+            ('VALIGN', (2, 0), (12,1), 'MIDDLE'),
 
             # 1 row
             ('SPAN', (2, 1), (6, 1)),  # n. catalogo generale
             ('SPAN', (7, 1), (12, 1)),  # catalogo internazionale
-            ('SPAN', (13, 1), (17, 1)),  # logo
-            ('SPAN', (13, 0), (17, 1)),  # logo
-            ('ALIGN', (13, 0), (17, 1), 'CENTER'),
-            ('VALIGN', (13, 0), (17, 1), 'MIDDLE'),
+            ('SPAN', (13, 1), (17, 1)),
+            ('SPAN', (13, 0), (17, 0)),  # logo
+            ('ALIGN', (13, 0), (17, 0), 'CENTER'),
+            ('VALIGN', (13, 0), (17, 0), 'MIDDLE'),
 
             # 2-3 row
             ('SPAN', (0, 2), (4, 3)),  # sito
@@ -2065,9 +2083,9 @@ class single_US_pdf_sheet(object):
 
             # 8-9 row
             ('SPAN', (0, 8), (0, 9)),  # label componenti
-            ('SPAN', (1, 8), (5, 8)),  # label geologici
-            ('SPAN', (6, 8), (11, 8)),  # label organici
-            ('SPAN', (12, 8), (17, 8)),  # label artificiali
+            ('SPAN', (1, 8), (5, 9)),  # label geologici
+            ('SPAN', (6, 8), (11, 9)),  # label organici
+            ('SPAN', (12, 8), (17, 9)),  # label artificiali
             ('SPAN', (1, 9), (5, 9)),  #  geologici
             ('SPAN', (6, 9), (11, 9)),  #  organici
             ('SPAN', (12, 9), (17, 9)),  #  artificiali
@@ -2283,8 +2301,8 @@ class single_US_pdf_sheet(object):
         
         label_sequenza_stratigrafica = Paragraph("<b>S<br/>T<br/>R<br/>A<br/>T<br/>I<br/>G<br/>R<br/>A<br/>F<br/>I<br/>S<br/>C<br/>H<br/>E<br/><br/<br/S<br/>E<br/>Q<br/>U<br/>E<br/>N<br/>C<br/>E</b>", styVerticale)
 
-        posteriore_a = Paragraph("<b>VORZEITIG ZU</b><br/>", styNormal)               # manca valore
-        anteriore_a = Paragraph("<b>NACHZEITIG ZU</b><br/>", styNormal)                 # manca valore
+        posteriore_a = Paragraph("<b>VORZEITIG ZU</b><br/>"+ self.copre +"<br/>" + self.riempie +"<br/>"+  self.taglia+ "<br/>" +   self.si_appoggia_a, styNormal)               # manca valore
+        anteriore_a = Paragraph("<b>NACHZEITIG ZU</b><br/>"+ self.coperto_da +"<br/>"+  self.riempito_da +"<br/>"+ self.tagliato_da +  "<br/>" + self.gli_si_appoggia, styNormal)                 # manca valore
 
         #23 row
 
@@ -2375,17 +2393,17 @@ class single_US_pdf_sheet(object):
             ('SPAN', (0, 0), (1, 1)),  # unita tipo
             ('VALIGN', (0, 0), (1, 1), 'MIDDLE'),
 
-            ('SPAN', (2, 0), (6, 0)),  # label n. catalogo generale
-            ('SPAN', (7, 0), (12, 0)),  # label n. catalogo internazionale
-            ('VALIGN', (2, 0), (12, 0), 'TOP'),
+            ('SPAN', (2, 0), (6, 1)),  # label n. catalogo generale
+            ('SPAN', (7, 0), (12, 1)),  # label n. catalogo internazionale
+            ('VALIGN', (2, 0), (12,1), 'MIDDLE'),
 
             # 1 row
             ('SPAN', (2, 1), (6, 1)),  # n. catalogo generale
             ('SPAN', (7, 1), (12, 1)),  # catalogo internazionale
-            ('SPAN', (13, 1), (17, 1)),  # logo
-            ('SPAN', (13, 0), (17, 1)),  # logo
-            ('ALIGN', (13, 0), (17, 1), 'CENTER'),
-            ('VALIGN', (13, 0), (17, 1), 'MIDDLE'),
+            ('SPAN', (13, 1), (17, 1)),
+            ('SPAN', (13, 0), (17, 0)),  # logo
+            ('ALIGN', (13, 0), (17, 0), 'CENTER'),
+            ('VALIGN', (13, 0), (17, 0), 'MIDDLE'),
 
             # 2-3 row
             ('SPAN', (0, 2), (4, 3)),  # sito
@@ -2421,9 +2439,9 @@ class single_US_pdf_sheet(object):
 
             # 8-9 row
             ('SPAN', (0, 8), (0, 9)),  # label componenti
-            ('SPAN', (1, 8), (5, 8)),  # label geologici
-            ('SPAN', (6, 8), (11, 8)),  # label organici
-            ('SPAN', (12, 8), (17, 8)),  # label artificiali
+            ('SPAN', (1, 8), (5, 9)),  # label geologici
+            ('SPAN', (6, 8), (11, 9)),  # label organici
+            ('SPAN', (12, 8), (17, 9)),  # label artificiali
             ('SPAN', (1, 9), (5, 9)),  #  geologici
             ('SPAN', (6, 9), (11, 9)),  #  organici
             ('SPAN', (12, 9), (17, 9)),  #  artificiali
@@ -2904,7 +2922,117 @@ class US_index_pdf_sheet(object):
 
         return styles
 
+class FOTO_index_pdf_sheet(object):
+    
 
+    def __init__(self, data):
+        
+        self.sito= data[0]
+        self.foto = data[5]
+        self.thumbnail = data[6]
+        self.us = data[2]
+        self.area = data[1]
+        self.d_stratigrafica= data[4]
+        self.unita_tipo =data[3]
+    def getTable(self):
+        styleSheet = getSampleStyleSheet()
+        styNormal = styleSheet['Normal']
+        styNormal.spaceBefore = 20
+        styNormal.spaceAfter = 20
+        styNormal.alignment = 0  # LEFT
+        styNormal.fontSize = 6
+
+        
+
+        conn = Connection()
+    
+        thumb_path = conn.thumb_path()
+        thumb_path_str = thumb_path['thumb_path']
+        area = Paragraph("<b>Area</b><br/>" + str(self.area), styNormal)
+        if self.unita_tipo == 'US':
+            us = Paragraph("<b>US</b><br/>" + str(self.us), styNormal)
+        else:
+            us = Paragraph("<b>USM</b><br/>" + str(self.us), styNormal)
+        foto = Paragraph("<b>Foto ID</b><br/>" + str(self.foto), styNormal)
+        d_stratigrafica = Paragraph("<b>Descrizione</b><br/>" + str(self.d_stratigrafica), styNormal)
+        us_presenti = Paragraph("<b>US-USM presenti</b><br/>", styNormal)
+        
+        logo= Image(self.thumbnail)
+        logo.drawHeight = 1 * inch * logo.drawHeight / logo.drawWidth
+        logo.drawWidth = 1 * inch
+        logo.hAlign = "CENTER"
+        
+        thumbnail= logo
+        data = [
+                foto,
+                thumbnail,
+                us,
+                area,
+                d_stratigrafica
+                ]
+
+        return data
+    def makeStyles(self):
+        styles = TableStyle([('GRID', (0, 0), (-1, -1), 0.0, colors.black), ('VALIGN', (0, 0), (-1, -1), 'TOP')
+                             ])  # finale
+
+        return styles
+class FOTO_index_pdf_sheet_2(object):
+    
+
+    def __init__(self, data):
+        
+        self.sito= data[0]
+        self.foto = data[5]
+        #self.thumbnail = data[6]
+        self.us = data[2]
+        self.area = data[1]
+        self.d_stratigrafica= data[4]
+        self.unita_tipo =data[3]
+    def getTable(self):
+        styleSheet = getSampleStyleSheet()
+        styNormal = styleSheet['Normal']
+        styNormal.spaceBefore = 20
+        styNormal.spaceAfter = 20
+        styNormal.alignment = 0  # LEFT
+        styNormal.fontSize = 6
+
+        
+
+        conn = Connection()
+    
+        thumb_path = conn.thumb_path()
+        thumb_path_str = thumb_path['thumb_path']
+        area = Paragraph("<b>Area</b><br/>" + str(self.area), styNormal)
+        if self.unita_tipo == 'US':
+            us = Paragraph("<b>US</b><br/>" + str(self.us), styNormal)
+        else:
+            us = Paragraph("<b>USM</b><br/>" + str(self.us), styNormal)
+        foto = Paragraph("<b>Foto ID</b><br/>" + str(self.foto), styNormal)
+        d_stratigrafica = Paragraph("<b>Descrizione</b><br/>" + str(self.d_stratigrafica), styNormal)
+        us_presenti = Paragraph("<b>US-USM presenti</b><br/>", styNormal)
+        
+        # logo= Image(self.thumbnail)
+        # logo.drawHeight = 1 * inch * logo.drawHeight / logo.drawWidth
+        # logo.drawWidth = 1 * inch
+        # logo.hAlign = "CENTER"
+        
+        #thumbnail= logo
+        data = [
+                foto,
+                #thumbnail,
+                us,
+                area,
+                d_stratigrafica
+                ]
+
+        return data
+    def makeStyles(self):
+        styles = TableStyle([('GRID', (0, 0), (-1, -1), 0.0, colors.black), ('VALIGN', (0, 0), (-1, -1), 'TOP')
+                             ])  # finale
+
+        return styles    
+        
 class generate_US_pdf(object):
     HOME = os.environ['PYARCHINIT_HOME']
 
@@ -3060,6 +3188,100 @@ class generate_US_pdf(object):
         doc.build(lst, canvasmaker=NumberedCanvas_USindex)
 
         f.close()
+        
+    def build_index_Foto(self, records, sito):
+        home = os.environ['PYARCHINIT_HOME']
+
+        home_DB_path = '{}{}{}'.format(home, os.sep, 'pyarchinit_DB_folder')
+        logo_path = '{}{}{}'.format(home_DB_path, os.sep, 'logo.jpg')
+        
+        logo = Image(logo_path)
+        logo.drawHeight = 1.5 * inch * logo.drawHeight / logo.drawWidth
+        logo.drawWidth = 1.5 * inch
+        logo.hAlign = "LEFT"
+
+        styleSheet = getSampleStyleSheet()
+        styNormal = styleSheet['Normal']
+        styBackground = ParagraphStyle('background', parent=styNormal, backColor=colors.pink)
+        styH1 = styleSheet['Heading3']
+
+        data = self.datestrfdate()
+
+        lst = []
+        lst.append(logo)
+        lst.append(
+            Paragraph("<b>ELENCO FOTO STRATIGRAFICHE</b><br/><b> Scavo: %s,  Data: %s</b>" % (sito, data), styH1))
+
+        table_data = []
+        for i in range(len(records)):
+            exp_index = FOTO_index_pdf_sheet(records[i])
+            table_data.append(exp_index.getTable())
+
+        styles = exp_index.makeStyles()
+        colWidths = [100, 105, 30, 30, 200]
+
+        table_data_formatted = Table(table_data, colWidths, style=styles)
+        table_data_formatted.hAlign = "LEFT"
+
+        lst.append(table_data_formatted)
+        lst.append(Spacer(0, 2))
+
+        dt = datetime.datetime.now()
+        filename = ('%s%s%s_%s_%s_%s_%s_%s_%s%s') % (
+        self.PDF_path, os.sep, 'Elenco_foto', dt.day, dt.month, dt.year, dt.hour, dt.minute, dt.second, ".pdf")
+        f = open(filename, "wb")
+
+        doc = SimpleDocTemplate(f, pagesize=A4)
+        doc.build(lst, canvasmaker=NumberedCanvas_USsheet)
+
+        f.close()
+    def build_index_Foto_2(self, records, sito):
+        home = os.environ['PYARCHINIT_HOME']
+
+        home_DB_path = '{}{}{}'.format(home, os.sep, 'pyarchinit_DB_folder')
+        logo_path = '{}{}{}'.format(home_DB_path, os.sep, 'logo.jpg')
+        
+        logo = Image(logo_path)
+        logo.drawHeight = 1.5 * inch * logo.drawHeight / logo.drawWidth
+        logo.drawWidth = 1.5 * inch
+        logo.hAlign = "LEFT"
+
+        styleSheet = getSampleStyleSheet()
+        styNormal = styleSheet['Normal']
+        styBackground = ParagraphStyle('background', parent=styNormal, backColor=colors.pink)
+        styH1 = styleSheet['Heading3']
+
+        data = self.datestrfdate()
+
+        lst = []
+        lst.append(logo)
+        lst.append(
+            Paragraph("<b>ELENCO FOTO STRATIGRAFICHE</b><br/><b> Scavo: %s,  Data: %s</b>" % (sito, data), styH1))
+
+        table_data = []
+        for i in range(len(records)):
+            exp_index = FOTO_index_pdf_sheet_2(records[i])
+            table_data.append(exp_index.getTable())
+
+        styles = exp_index.makeStyles()
+        colWidths = [100, 50, 50, 200]
+
+        table_data_formatted = Table(table_data, colWidths, style=styles)
+        table_data_formatted.hAlign = "LEFT"
+
+        lst.append(table_data_formatted)
+        lst.append(Spacer(0, 2))
+
+        dt = datetime.datetime.now()
+        filename = ('%s%s%s_%s_%s_%s_%s_%s_%s%s') % (
+        self.PDF_path, os.sep, 'Elenco_foto', dt.day, dt.month, dt.year, dt.hour, dt.minute, dt.second, ".pdf")
+        f = open(filename, "wb")
+
+        doc = SimpleDocTemplate(f, pagesize=A4)
+        doc.build(lst, canvasmaker=NumberedCanvas_USsheet)
+
+        f.close()
+        
     def build_index_US_en(self, records, sito):
         home = os.environ['PYARCHINIT_HOME']
 

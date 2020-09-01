@@ -688,7 +688,6 @@ class pyarchinit_Inventario_reperti(QDialog, MAIN_DIALOG_CLASS):
         self.data_list = d
         self.title = t
         self.ylabel = yl
-
         if type(self.data_list) == list:
             data_diz = {}
             for item in self.data_list:
@@ -698,33 +697,28 @@ class pyarchinit_Inventario_reperti(QDialog, MAIN_DIALOG_CLASS):
         values = list(data_diz.values())
         teams = list(data_diz.keys())
         ind = np.arange(n_bars)
-        # randomNumbers = random.sample(range(0, 10), 10)
+        #randomNumbers = random.sample(range(0, 10), 10)
         self.widget.canvas.ax.clear()
-        # QMessageBox.warning(self, "Alert", str(teams) ,  QMessageBox.Ok)
-
-        bars = self.widget.canvas.ax.bar(left=x, height=values, width=0.5, align='center', alpha=0.4, picker=5)
-        # guardare il metodo barh per barre orizzontali
+        #QMessageBox.warning(self, "Alert", str(teams) ,  QMessageBox.Ok)
+        bars = self.widget.canvas.ax.bar(x, height=values, width=0.5, align='center', alpha=0.4,picker=5)
+        #guardare il metodo barh per barre orizzontali
         self.widget.canvas.ax.set_title(self.title)
         self.widget.canvas.ax.set_ylabel(self.ylabel)
         l = []
         for team in teams:
             l.append('""')
-
-            # self.widget.canvas.ax.set_xticklabels(x , ""   ,size = 'x-small', rotation = 0)
+        #self.widget.canvas.ax.set_xticklabels(x , ""   ,size = 'x-small', rotation = 0)
         n = 0
-
         for bar in bars:
             val = int(bar.get_height())
             x_pos = bar.get_x() + 0.25
-            label = teams[n] + ' - ' + str(val)
-            y_pos = 0.1  # bar.get_height() - bar.get_height() + 1
+            label  = teams[n]+ ' - ' + str(val)
+            y_pos = 0.1 #bar.get_height() - bar.get_height() + 1
             self.widget.canvas.ax.tick_params(axis='x', labelsize=8)
-            # self.widget.canvas.ax.set_xticklabels(ind + x, ['fg'], position = (x_pos,y_pos), xsize = 'small', rotation = 90)
-
-            self.widget.canvas.ax.text(x_pos, y_pos, label, zorder=0, ha='center', va='bottom', size='x-small',
-                                       rotation=90)
-            n += 1
-            # self.widget.canvas.ax.plot(randomNumbers)
+            #self.widget.canvas.ax.set_xticklabels(ind + x, ['fg'], position = (x_pos,y_pos), xsize = 'small', rotation = 90)
+            self.widget.canvas.ax.text(x_pos, y_pos, label,zorder=0, ha='center', va='bottom',size = 'x-small', rotation = 90)
+            n+=1
+        #self.widget.canvas.ax.plot(randomNumbers)
         self.widget.canvas.draw()
 
     def on_pushButton_connect_pressed(self):
@@ -821,7 +815,7 @@ class pyarchinit_Inventario_reperti(QDialog, MAIN_DIALOG_CLASS):
         self.iconListWidget.setBatchSize(1000)
         self.iconListWidget.setObjectName("iconListWidget")
         self.iconListWidget.SelectionMode()
-        self.iconListWidget.setSelectionMode(QAbstractItemView.MultiSelection)
+        self.iconListWidget.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.iconListWidget.itemDoubleClicked.connect(self.openWide_image)
         self.tabWidget.addTab(self.iconListWidget, "Media")
 
@@ -1019,8 +1013,8 @@ class pyarchinit_Inventario_reperti(QDialog, MAIN_DIALOG_CLASS):
                 item = QListWidgetItem(str(i.media_name))
 
                 item.setData(Qt.UserRole, str(i.media_name))
-                icon = QIcon(thumb_path)
                 icon = QIcon(thumb_path_str+thumb_path)
+                item.setIcon(icon)
                 self.iconListWidget.addItem(item)
         elif mode == 1:
             self.iconListWidget.clear()
@@ -2324,7 +2318,7 @@ class pyarchinit_Inventario_reperti(QDialog, MAIN_DIALOG_CLASS):
                     elif self.L=='de':
                         QMessageBox.warning(self, "ACHTUNG", "Keinen Record gefunden!", QMessageBox.Ok)
                     else:
-                        QMessageBox.warning(self, "WARNING," "No record found!", QMessageBox.Ok)
+                        QMessageBox.warning(self, "WARNING", "No record found!", QMessageBox.Ok)
 
                     self.set_rec_counter(len(self.DATA_LIST), self.REC_CORR + 1)
                     self.DATA_LIST_REC_TEMP = self.DATA_LIST_REC_CORR = self.DATA_LIST[0]

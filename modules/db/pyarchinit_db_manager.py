@@ -64,12 +64,8 @@ class Pyarchinit_db_management(object):
                 self.engine = create_engine(self.conn_str, max_overflow=-1, echo=eval(self.boolean))
             self.metadata = MetaData(self.engine)
             conn = self.engine.connect()
-        except Exception as e:
-            QgsMessageLog.logMessage(
-                "Something gone wrong on db connection: " + str(e), tag="PyArchInit", level=Qgis.Warning)
-            iface.messageBar().pushMessage("Error",
-                                            "Something gone wrong on db connection, view log message",
-                                            level=Qgis.Warning)
+        except:
+            pass
             test = False
         finally:
             conn.close()
@@ -77,12 +73,8 @@ class Pyarchinit_db_management(object):
         try:
             db_upd = DB_update(self.conn_str)
             db_upd.update_table()
-        except Exception as e:
-            QgsMessageLog.logMessage(
-                "Something gone wrong on update table: " + str(e), tag="PyArchInit", level=Qgis.Warning)
-            iface.messageBar().pushMessage("Error",
-                                            "Something gone wrong on update table, view log message",
-                                            level=Qgis.Warning)
+        except:
+            pass
             test = False
         return test
 
@@ -799,7 +791,50 @@ class Pyarchinit_db_management(object):
         '''
         session.close()
         return res
+    def query_bool_special(self, params, table):
+        u = Utility()
+        params = u.remove_empty_items_fr_dict(params)
 
+        list_keys_values = list(params.items())
+
+        field_value_string = ""
+
+        for sing_couple_n in range(len(list_keys_values)):
+            if sing_couple_n == 0:
+                if type(list_keys_values[sing_couple_n][1]) != "<type 'str'>":
+                    field_value_string = table + ".%s == %s" % (
+                    list_keys_values[sing_couple_n][0], list_keys_values[sing_couple_n][1])
+                else:
+                    field_value_string = table + ".%s == u%s" % (
+                    list_keys_values[sing_couple_n][0], list_keys_values[sing_couple_n][1])
+            else:
+                if type(list_keys_values[sing_couple_n][1]) == "<type 'str'>":
+                    field_value_string = field_value_string + "," + table + ".%s == %s" % (
+                    list_keys_values[sing_couple_n][0], list_keys_values[sing_couple_n][1])
+                else:
+                    field_value_string = field_value_string + "," + table + ".%s == %s" % (
+                    list_keys_values[sing_couple_n][0], list_keys_values[sing_couple_n][1])
+
+                    # field_value_string = ", ".join([table + ".%s == u%s" % (k, v) for k, v in params.items()])
+
+        """
+        Per poter utilizzare l'operatore LIKE è necessario fare una iterazione attraverso il dizionario per discriminare tra
+        stringhe e numeri
+        #field_value_string = ", ".join([table + ".%s.like(%s)" % (k, v) for k, v in params.items()])
+        """
+        # self.connection()
+        Session = sessionmaker(bind=self.engine, autoflush=True, autocommit=True)
+        session = Session()
+        query_str = "session.query(" + table + ").filter(and_("+field_value_string+" )).all()"
+        res = eval(query_str)
+
+        '''
+        t = open("/test_import.txt", "w")
+        t.write(str(query_str))
+        t.close()
+        '''
+        session.close()
+        return res
     def query_operator(self, params, table):
         u = Utility()
         # params = u.remove_empty_items_fr_dict(params)
@@ -1132,6 +1167,50 @@ class Pyarchinit_db_management(object):
 
                 self.update('US', 'id_us', [int(i.id_us)], ['cont_per'], [cod_cont_var_txt])
 
+    def remove_alltags_from_db_sql(self,s):
+        sql_query_string = ("DELETE FROM media_to_entity_table WHERE media_name  = '%s'") % (s)
+    
+        res = self.engine.execute(sql_query_string)
+        # rows= res.fetchall()
+        return res    
+    
+    def remove_tags_from_db_sql(self,s):
+        sql_query_string = ("DELETE FROM media_to_entity_table WHERE id_entity  = '%s'") % (s)
+    
+        res = self.engine.execute(sql_query_string)
+        # rows= res.fetchall()
+        return res    
+    def delete_thumb_from_db_sql(self,s):
+        sql_query_string = ("DELETE FROM media_thumb_table WHERE media_filename  = '%s'") % (s)
+    
+        res = self.engine.execute(sql_query_string)
+        # rows= res.fetchall()
+        return res    
+    def select_medianame_from_db_sql(self,sito,area):
+        sql_query_string = ("SELECT c.filepath, b.us,a.media_name FROM media_to_entity_table as a,  us_table as b, media_thumb_table as c WHERE b.id_us=a.id_entity and c.id_media=a.id_media  and b.sito= '%s' and b.area='%s'")%(sito,area) 
+        
+        res = self.engine.execute(sql_query_string)
+        rows= res.fetchall()
+        return rows
+    def select_medianame_2_from_db_sql(self,sito,area,us):
+        sql_query_string = ("SELECT c.filepath, b.us,a.media_name FROM media_to_entity_table as a,  us_table as b, media_thumb_table as c WHERE b.id_us=a.id_entity and c.id_media=a.id_media  and b.sito= '%s' and b.area='%s' and us = '%s'")%(sito,area,us) 
+        
+        res = self.engine.execute(sql_query_string)
+        rows= res.fetchall()
+        return rows
+    
+    def select_medianame_3_from_db_sql(self,sito,area,us):
+        sql_query_string = ("SELECT c.filepath, b.us,a.media_name FROM media_to_entity_table as a,  inventario_materiali_table as b, media_thumb_table as c WHERE b.id_invmat=a.id_entity and c.id_media=a.id_media  and b.sito= '%s' and b.area='%s' and us = '%s'")%(sito,area,us) 
+        
+        res = self.engine.execute(sql_query_string)
+        rows= res.fetchall()
+        return rows
+    
+    def select_thumbnail_from_db_sql(self,sito):
+        sql_query_string = ("SELECT c.filepath, group_concat ((select us from us_table where id_us like id_entity))as us,a.media_name,b.area,b.unita_tipo FROM  media_to_entity_table as a,  us_table as b, media_thumb_table as c WHERE b.id_us=a.id_entity and c.id_media=a.id_media and sito='%s' group by a.media_name order by a.media_name asc")%(sito)
+        res = self.engine.execute(sql_query_string)
+        rows= res.fetchall()
+        return rows
     def select_quote_from_db_sql(self, sito, area, us):
         sql_query_string = ("SELECT * FROM pyarchinit_quote WHERE sito_q = '%s' AND area_q = '%s' AND us_q = '%s'") % (
         sito, area, us)
@@ -1164,6 +1243,14 @@ class Pyarchinit_db_management(object):
         res = self.engine.execute(sql_query_string)
         return res
     
+    def select_db_sql_2(self, sito,area,us,d_stratigrafica):
+        sql_query_string = ("SELECT * FROM us_table as a where a.sito='%s' AND a.area='%s' AND a.us='%s' AND a.d_stratigrafica='%s'") % (sito,area,us,d_stratigrafica)
+        res = self.engine.execute(sql_query_string)
+        rows= res.fetchall()
+        
+        return rows
+    
+    
     def test_ut_sql(self,unita_tipo):
         sql_query_string = ("SELECT %s FROM us_table")% (unita_tipo)
         res = self.engine.execute(sql_query_string)
@@ -1190,15 +1277,17 @@ class Pyarchinit_db_management(object):
         id_us = self.max_num_id('US', 'id_us')
         
         l=QgsSettings().value("locale/userLocale")[0:2]
+
         for i in range(us_range):
             id_us += 1
-            n_us += 1
-            
+
             data_ins = self.insert_values(id_us, sito, area, n_us, '', '', '', '', '', '', '', '', '', '', '', '', '[]',
                                           '[]', '[]', '', '', '', '', '', '', '', '', '0', '[]', unita_tipo, '', '', '', '',
                                           '', '', '', '', '', '', '', '', '', None, None, '', '[]','[]', '[]', '[]', '[]','','','','',None,None,'','','','','','','[]','[]',None,None,None,None,None,None,None,None,None,None,'','','','','','','','','','',None,None,None,'','','','','','','','')
                                            
             self.insert_data_session(data_ins)
+            n_us += 1
+        return
 
     def select_like_from_db_sql(self, rapp_list, us_rapp_list):
         # this is a test

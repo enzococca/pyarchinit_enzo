@@ -286,15 +286,17 @@ ALTER TABLE pyarchinit_doc_view
 ALTER TABLE pyarchinit_us_negative_doc_view
     OWNER TO postgres;
 	
+drop view pyarchinit_us_view;
+
 CREATE OR REPLACE VIEW pyarchinit_us_view AS
  SELECT pyunitastratigrafiche.gid,
     pyunitastratigrafiche.the_geom,
-    pyunitastratigrafiche.tipo_us_s,
     pyunitastratigrafiche.scavo_s,
     pyunitastratigrafiche.area_s,
     pyunitastratigrafiche.us_s,
     pyunitastratigrafiche.stratigraph_index_us,
-    pyunitastratigrafiche.rilievo_orginale,
+    pyunitastratigrafiche.tipo_us_s,
+	pyunitastratigrafiche.rilievo_originale,
     pyunitastratigrafiche.disegnatore,
     pyunitastratigrafiche.data,
     pyunitastratigrafiche.tipo_doc,
@@ -439,7 +441,7 @@ ALTER TABLE pyarchinit_reperti
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
-	
+drop view pyarchinit_reperti_view;	
 	CREATE OR REPLACE VIEW pyarchinit_reperti_view AS 
 	SELECT
 	the_geom,

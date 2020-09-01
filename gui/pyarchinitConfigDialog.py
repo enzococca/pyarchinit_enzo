@@ -25,13 +25,17 @@ import os
 import sqlite3
 import time
 from sqlalchemy.event import listen
-
+import platform
 from builtins import range
 from builtins import str
-import pysftp
+#import pysftp
+import ftplib
+from ftplib import FTP
+import subprocess
 from sqlalchemy.sql import select, func
 from sqlalchemy import create_engine
-from qgis.PyQt.QtCore import  pyqtSlot, pyqtSignal,QThread
+from qgis.PyQt.QtGui import QDesktopServices
+from qgis.PyQt.QtCore import  pyqtSlot, pyqtSignal,QThread,QUrl
 from qgis.PyQt.QtWidgets import QApplication, QDialog, QMessageBox, QFileDialog,QLineEdit,QWidget
 
 from qgis.PyQt.uic import loadUiType
@@ -84,6 +88,10 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
         self.pbnSaveEnvironPath.clicked.connect(self.setEnvironPath)
         self.toolButton_thumbpath.clicked.connect(self.setPathThumb)
         self.toolButton_resizepath.clicked.connect(self.setPathResize)
+        self.toolButton_set_dbsqlite1.clicked.connect(self.setPathDBsqlite1)
+        self.toolButton_set_dbsqlite2.clicked.connect(self.setPathDBsqlite2)
+        self.pbnOpenthumbDirectory.clicked.connect(self.openthumbDir)
+        self.pbnOpenresizeDirectory.clicked.connect(self.openresizeDir)
         self.toolButton_db.clicked.connect(self.setPathDB)
         self.pushButtonR.clicked.connect(self.setPathR)
         self.pbnSaveEnvironPathR.clicked.connect(self.setEnvironPathR)
@@ -110,15 +118,46 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
         
         self.selectorCrsWidget.setCrs(QgsProject.instance().crs())
         self.selectorCrsWidget_sl.setCrs(QgsProject.instance().crs())
-
+    def setPathDBsqlite1(self):
+        s = QgsSettings()
+        dbpath = QFileDialog.getOpenFileName(
+            self,
+            "Set file name",
+            self.DBFOLDER,
+            " db sqlite (*.sqlite)"
+        )[0]
+        filename=dbpath.split("/")[-1]
+        if filename:
+             
+            self.lineEdit_database_rd.setText(filename)
+            s.setValue('',filename)  
+                                
+    def setPathDBsqlite2(self):
+        s = QgsSettings()
+        dbpath = QFileDialog.getOpenFileName(
+            self,
+            "Set file name",
+            self.DBFOLDER,
+            " db sqlite (*.sqlite)"
+        )[0]
+        filename=dbpath.split("/")[-1]
+        if filename:
+             
+            self.lineEdit_database_wt.setText(filename)
+            s.setValue('',filename)                        
     def openthumbDir(self):
         s = QgsSettings()
-        dir = self.lineEdit_Thumb_path.text()
-        if os.path.exists(dir):
-            QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
-        else:
-            QMessageBox.warning(self, "INFO", "Directory not found",
-                                QMessageBox.Ok)
+        dbpath = QFileDialog.getOpenFileName(
+            self,
+            "Set file name",
+            self.DBFOLDER,
+            " db sqlite (*.sqlite)"
+        )[0]
+        filename=dbpath.split("/")[-1]
+        if filename:
+             
+            self.lineEdit_DBname.setText(filename)
+            s.setValue('',filename)
     def openresizeDir(self):
         s = QgsSettings()
         dir = self.lineEdit_Thumb_resize.text()
@@ -482,6 +521,9 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
             sql_alter= """alter table media_thumb_table rename to 'temp_media_thumb';"""
             c.execute(sql_alter)
             
+            # sql_drop_media_thumb_table="""DROP TABLE media_thumb_table;"""
+            # c.execute(sql_drop_media_thumb_table)
+            
             sql_media_thumb="""CREATE TABLE media_thumb_table (id_media_thumb INTEGER NOT NULL, id_media INTEGER, mediatype TEXT, media_filename TEXT, media_thumb_filename TEXT, filetype VARCHAR(10), filepath TEXT, path_resize TEXT, PRIMARY KEY (id_media_thumb), CONSTRAINT "ID_media_thumb_unico" UNIQUE (media_thumb_filename) )"""
             c.execute(sql_media_thumb)
             
@@ -552,6 +594,141 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
             c.execute(sql_view_rep_geom)
             
             
+            sql_ater_colum_materiali=( 
+            
+            """ALTER TABLE inventario_materiali_table rename TO _table_old;""")
+            
+            c.execute(sql_ater_colum_materiali)
+            sql_ater_colum_materiali_1=( 
+            """CREATE TABLE inventario_materiali_table (
+
+            id_invmat 
+            INTEGER ,
+            sito 
+            TEXT ,
+            numero_inventario 
+            INTEGER ,
+            tipo_reperto 
+            TEXT ,
+            criterio_schedatura 
+            TEXT ,
+            definizione 
+            TEXT ,
+            descrizione 
+            TEXT ,
+            area 
+            TEXT,
+            us 
+            INTEGER ,
+            lavato 
+            VARCHAR(2) ,
+            nr_cassa 
+            INTEGER ,
+            luogo_conservazione 
+            TEXT ,
+            stato_conservazione 
+            VARCHAR(20) ,
+            datazione_reperto 
+            VARCHAR(100) ,
+            elementi_reperto 
+            TEXT ,
+            misurazioni 
+            TEXT ,
+            rif_biblio 
+            TEXT ,
+            tecnologie 
+            TEXT ,
+            forme_minime 
+            INTEGER ,
+            forme_massime 
+            INTEGER ,
+            totale_frammenti 
+            INTEGER ,
+            corpo_ceramico 
+            VARCHAR(20) ,
+            rivestimento 
+            VARCHAR(20) ,
+            diametro_orlo 
+            NUMERIC(7, 3) ,
+            peso 
+            NUMERIC(9, 3) ,
+            tipo 
+            VARCHAR(20) ,
+            eve_orlo 
+            NUMERIC(7, 3) ,
+            repertato 
+            varchar(2) ,
+            diagnostico 
+            varchar(2));""" )
+            c.execute(sql_ater_colum_materiali_1)
+            sql_ater_colum_materiali_2=( 
+            """INSERT INTO inventario_materiali_table (
+            id_invmat ,
+            sito ,
+            numero_inventario ,
+            tipo_reperto ,
+            criterio_schedatura ,
+            definizione ,
+            descrizione ,
+            area ,
+            us ,
+            lavato ,
+            nr_cassa ,
+            luogo_conservazione ,
+            stato_conservazione ,
+            datazione_reperto ,
+            elementi_reperto ,
+            misurazioni ,
+            rif_biblio ,
+            tecnologie ,
+            forme_minime ,
+            forme_massime ,
+            totale_frammenti ,
+            corpo_ceramico ,
+            rivestimento, 
+            diametro_orlo ,
+            peso ,
+            tipo ,
+            eve_orlo ,
+            repertato ,
+            diagnostico 
+            )
+              SELECT *
+              FROM _table_old; """)
+
+            
+            c.execute(sql_ater_colum_materiali_2)
+            
+            sql_drop_view_materiali=(
+            """drop view inventario_materiali_view;""")
+            c.execute(sql_drop_view_materiali)
+            
+            sql_drop_table_materiali=(
+            """drop table _table_old;""")
+            c.execute(sql_drop_table_materiali)
+            sql_create_view_materiali=(
+            """CREATE VIEW "inventario_materiali_view" AS
+            SELECT "a"."ROWID" AS "ROWID", "a"."id" AS "id", "a"."id_sito" AS "id_sito",
+            "a"."sito_nome" AS "sito_nome", "a"."descr_sito" AS "descr_sito",
+            "a"."the_geom" AS "the_geom", "b"."ROWID" AS "ROWID_1",
+            "b"."id_invmat" AS "id_invmat", "b"."sito" AS "sito",
+            "b"."numero_inventario" AS "numero_inventario",
+            "b"."tipo_reperto" AS "tipo_reperto", "b"."criterio_schedatura" AS "criterio_schedatura",
+            "b"."definizione" AS "definizione", "b"."descrizione" AS "descrizione",
+            "b"."area" AS "area", "b"."us" AS "us", "b"."lavato" AS "lavato",
+            "b"."nr_cassa" AS "nr_cassa", "b"."luogo_conservazione" AS "luogo_conservazione",
+            "b"."stato_conservazione" AS "stato_conservazione",
+            "b"."datazione_reperto" AS "datazione_reperto",
+            "b"."elementi_reperto" AS "elementi_reperto", "b"."misurazioni" AS "misurazioni",
+            "b"."rif_biblio" AS "rif_biblio", "b"."tecnologie" AS "tecnologie",
+            "b"."forme_minime" AS "forme_minime", "b"."forme_massime" AS "forme_massime",
+            "b"."totale_frammenti" AS "totale_frammenti", "b"."corpo_ceramico" AS "corpo_ceramico",
+            "b"."rivestimento" AS "rivestimento", "b"."diametro_orlo" AS "diametro_orlo",
+            "b"."peso" AS "peso", "b"."tipo" AS "tipo", "b"."eve_orlo" AS "eve_orlo",
+            "b"."repertato" AS "repertato", "b"."diagnostico" AS "diagnostico"
+            FROM "pyarchinit_siti" AS "a"
+            JOIN "inventario_materiali_table" AS "b" ON ("a"."sito_nome" = "b"."sito")""")
+            c.execute(sql_create_view_materiali)
             
             RestoreSchema(db_url,None).update_geom_srid_sl('%d' % int(self.lineEdit_crs.text()))
             c.close()
@@ -692,9 +869,13 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                 'STRUTTURA': 'id_struttura',
                 'TAFONOMIA': 'id_tafonomia',
                 'SCHEDAIND': 'id_scheda_ind',
-                'CAMPIONE': 'id_campione',
+                'CAMPIONI': 'id_campione',
                 'DOCUMENTAZIONE': 'id_documentazione',
-                'PYARCHINIT_THESAURUS_SIGLE': 'id_thesaurus_sigle'
+                'PYARCHINIT_THESAURUS_SIGLE': 'id_thesaurus_sigle',
+                'MEDIA': 'id_media',
+                'MEDIA_THUMB': 'id_media_thumb',
+                'MEDIATOENTITY':'id_mediaToEntity'
+                
             }
         elif self.L=='de':
             id_table_class_mapper_conv_dict = {
@@ -708,7 +889,10 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                 'INDIVIDUEL': 'id_scheda_ind',
                 'BEISPIELS': 'id_campione',
                 'DOKUMENTATION': 'id_documentazione',
-                'PYARCHINIT_THESAURUS_SIGLE': 'id_thesaurus_sigle'
+                'PYARCHINIT_THESAURUS_SIGLE': 'id_thesaurus_sigle',
+                'MEDIA': 'id_media',
+                'MEDIA_THUMB': 'id_media_thumb',
+                'MEDIATOENTITY':'id_mediaToEntity'
             }
         else:
             id_table_class_mapper_conv_dict = {
@@ -722,7 +906,10 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                 'INDIVIDUAL': 'id_scheda_ind',
                 'SAMPLE': 'id_campione',
                 'DOCUMENTATION': 'id_documentazione',
-                'PYARCHINIT_THESAURUS_SIGLE': 'id_thesaurus_sigle'
+                'PYARCHINIT_THESAURUS_SIGLE': 'id_thesaurus_sigle',
+                'MEDIA': 'id_media',
+                'MEDIA_THUMB': 'id_media_thumb',
+                'MEDIATOENTITY':'id_mediaToEntity'
             }       
         # creazione del cursore di lettura
         """if os.name == 'posix':
@@ -846,7 +1033,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                         
                    
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -856,7 +1043,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
         
         #### US TABLE
@@ -970,7 +1157,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
 
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -983,7 +1170,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     e_error= str(e)
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ str(e),  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
         elif mapper_class_write == 'PERIODIZZAZIONE' :
             for sing_rec in range(len(data_list_toimp)):
@@ -1002,7 +1189,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                 
                 
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -1012,7 +1199,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
         
         elif mapper_class_write == 'INVENTARIO_MATERIALI' :
@@ -1054,7 +1241,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -1065,7 +1252,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
       
         elif mapper_class_write == 'STRUTTURA' :
@@ -1094,18 +1281,16 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     )
                     
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
                         QApplication.processEvents()
-                    
-                
                 except :
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
         
         elif mapper_class_write == 'TAFONOMIA' :
@@ -1204,7 +1389,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     )
                         
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -1214,7 +1399,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
         
         elif mapper_class_write == 'SCHEDAIND' :
@@ -1237,7 +1422,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     )
                 
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -1247,17 +1432,16 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
         
-        elif mapper_class_write == 'CAMPIONE':
+        elif mapper_class_write == 'CAMPIONI':
             for sing_rec in range(len(data_list_toimp)):
                 try:
                     data = self.DB_MANAGER_write.insert_values_campioni(
                         self.DB_MANAGER_write.max_num_id(mapper_class_write,
                                                          id_table_class_mapper_conv_dict[mapper_class_write]) + 1,
                         data_list_toimp[sing_rec].sito,
-                        data_list_toimp[sing_rec].area,
                         data_list_toimp[sing_rec].nr_campione,
                         data_list_toimp[sing_rec].tipo_campione,
                         data_list_toimp[sing_rec].descrizione,
@@ -1268,7 +1452,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                         data_list_toimp[sing_rec].luogo_conservazione
                     )
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -1278,7 +1462,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
        
         elif mapper_class_write == 'DOCUMENTAZIONE' :
@@ -1298,7 +1482,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     )
 
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -1309,7 +1493,9 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                
                     return 0
-                
+            
+            self.progress_bar.reset()
+            QMessageBox.information(self, "Message", "Data Loaded")
            
         elif mapper_class_write == 'UT':
             for sing_rec in range(len(data_list_toimp)):
@@ -1363,7 +1549,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
 
                 
                     self.DB_MANAGER_write.insert_data_session(data)
-                    for i in range(0,100):    
+                    for i in range(sing_rec):    
                         #time.sleep()
                         self.progress_bar.setValue(((i)/100)*100)
                      
@@ -1374,7 +1560,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
                     
                     QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
                     return 0
-            #self.progress_bar.close()
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
 
 
@@ -1384,34 +1570,169 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
             
             for sing_rec in range(len(data_list_toimp)):
                 
-                #try:
-                data = self.DB_MANAGER_write.insert_values_thesaurus(
-                    self.DB_MANAGER_write.max_num_id(mapper_class_write,
-                                                     id_table_class_mapper_conv_dict[mapper_class_write]) + 1,
-                    data_list_toimp[sing_rec].nome_tabella,
-                    data_list_toimp[sing_rec].sigla,
-                    data_list_toimp[sing_rec].sigla_estesa,
-                    data_list_toimp[sing_rec].descrizione,
-                    data_list_toimp[sing_rec].tipologia_sigla,
-                    data_list_toimp[sing_rec].lingua
-                    )
+                try:
+                    data = self.DB_MANAGER_write.insert_values_thesaurus(
+                        self.DB_MANAGER_write.max_num_id(mapper_class_write,
+                                                         id_table_class_mapper_conv_dict[mapper_class_write]) + 1,
+                        data_list_toimp[sing_rec].nome_tabella,
+                        data_list_toimp[sing_rec].sigla,
+                        data_list_toimp[sing_rec].sigla_estesa,
+                        data_list_toimp[sing_rec].descrizione,
+                        data_list_toimp[sing_rec].tipologia_sigla,
+                        data_list_toimp[sing_rec].lingua
+                        )
+                        
                     
-               
-                self.DB_MANAGER_write.insert_data_session(data)
-                for i in range(0,100):    
-                    #time.sleep()
-                    self.progress_bar.setValue(((i)/100)*100)
-                 
-                    QApplication.processEvents()
+                    self.DB_MANAGER_write.insert_data_session(data)
+                    for i in range(sing_rec):    
+                        #time.sleep()
+                        self.progress_bar.setValue(((i)/100)*100)
+                     
+                        QApplication.processEvents()
                     
-                # except :
+                except :
                     
-                    # QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
-                    # return 0
-            #self.progress_bar.close()
+                    QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
+                    return 0
+            self.progress_bar.reset()
             QMessageBox.information(self, "Message", "Data Loaded")
+        ###########################IMPORTAZIONE MEDIA##############################################    
+        elif mapper_class_write == 'MEDIA' :
+            for sing_rec in range(len(data_list_toimp)):
+                try:
+                    data = self.DB_MANAGER_write.insert_media_values(
+                        self.DB_MANAGER_write.max_num_id(mapper_class_write,
+                                                         id_table_class_mapper_conv_dict[mapper_class_write]) + 1,
+                        #data_list_toimp[sing_rec].id_media,
+                        data_list_toimp[sing_rec].mediatype,
+                        data_list_toimp[sing_rec].filename,
+                        data_list_toimp[sing_rec].filetype,
+                        data_list_toimp[sing_rec].filepath,
+                        data_list_toimp[sing_rec].descrizione,
+                        data_list_toimp[sing_rec].tags)
 
+                    
+                    self.DB_MANAGER_write.insert_data_session(data)
+                    for i in range(sing_rec):    
+                        #time.sleep()
+                        self.progress_bar.setValue(((i)/100)*100)
+                     
+                        QApplication.processEvents()
+                        
+                except Exception as  e:
+                    e_str = str(e)
+                    QMessageBox.warning(self, "Errore", "Error ! \n"+ str(e),  QMessageBox.Ok)
+               
+                    return 0
+            self.progress_bar.reset()
+            QMessageBox.information(self, "Message", "Data Loaded")
     
+        elif mapper_class_write == 'MEDIA_THUMB' :
+            for sing_rec in range(len(data_list_toimp)):
+                try:
+                    data = self.DB_MANAGER_write.insert_mediathumb_values(
+                        self.DB_MANAGER_write.max_num_id(mapper_class_write,
+                                                         id_table_class_mapper_conv_dict[mapper_class_write]) + 1,
+                        #data_list_toimp[sing_rec].id_media_thumb,
+                        data_list_toimp[sing_rec].id_media,
+                        data_list_toimp[sing_rec].mediatype,
+                        data_list_toimp[sing_rec].media_filename,
+                        data_list_toimp[sing_rec].media_thumb_filename,
+                        data_list_toimp[sing_rec].filetype,
+                        data_list_toimp[sing_rec].filepath,
+                        data_list_toimp[sing_rec].path_resize)
+
+                    
+                    self.DB_MANAGER_write.insert_data_session(data)
+                    for i in range(sing_rec):    
+                        #time.sleep()
+                        self.progress_bar.setValue(((i)/100)*100)
+                     
+                        QApplication.processEvents()
+               
+                except Exception as  e:
+                    e_str = str(e)
+                    QMessageBox.warning(self, "Errore", "Error ! \n"+ "duplicate key",  QMessageBox.Ok)
+               
+                    return 0
+            self.progress_bar.reset()
+            QMessageBox.information(self, "Message", "Data Loaded")
+    
+    
+        elif mapper_class_write == 'MEDIATOENTITY' :
+            for sing_rec in range(len(data_list_toimp)):
+                try:
+                    data = self.DB_MANAGER_write.insert_media2entity_values(
+                        self.DB_MANAGER_write.max_num_id(mapper_class_write,
+                                                         id_table_class_mapper_conv_dict[mapper_class_write]) + 1,
+                        #data_list_toimp[sing_rec].id_mediaToEntity,
+                        data_list_toimp[sing_rec].id_entity,
+                        data_list_toimp[sing_rec].entity_type,
+                        data_list_toimp[sing_rec].table_name,
+                        data_list_toimp[sing_rec].id_media,
+                        data_list_toimp[sing_rec].filepath,
+                        data_list_toimp[sing_rec].media_name)
+
+                    
+                    self.DB_MANAGER_write.insert_data_session(data)
+                    for i in range(sing_rec):    
+                        #time.sleep()
+                        self.progress_bar.setValue(((i)/100)*100)
+                     
+                        QApplication.processEvents()
+                        
+                except Exception as  e:
+                    e_str = str(e)
+                    QMessageBox.warning(self, "Errore", "Error ! \n"+ str(e),  QMessageBox.Ok)
+               
+                    return 0
+            self.progress_bar.reset()
+            QMessageBox.information(self, "Message", "Data Loaded")
+    #######################importa tutte le geometrie##########################################
+    def on_pushButton_geometry_pressed (self):
+        try:
+            subprocess.check_output([
+                'ogr2ogr',
+                '--config', 'PG_LIST_ALL_TABLES', 'YES',
+                '--config', 'PG_SKIP_VIEWS', 'YES',
+                '-f',
+                'SQLITE',
+                "'{}'".format(self.lineEdit_database_wt),
+                '-progress',
+                
+                "PG:host='{}' port={} dbname='{}' user='{} password='{}'".format(self.lineEdit_host_rd, self.lineEdit_port_rd, self.lineEdit_database_rd, self.lineEdit_username_rd, self.lineEdit_pass_rd),
+                '-lco',
+                'LAUNDER=yes'
+                "SCHEMA={}".format('public'),
+                '-dsco',
+                'SPATIALITE=yes',
+                '-lco',
+                'SPATIAL_INDEX=yes'
+                ])
+        except Exception as e :
+                    
+            QMessageBox.warning(self, "Update error", str(e),  QMessageBox.Ok)
+            return 0
+        QMessageBox.information(self, "Message", "Data Loaded")
+    
+        
+    def openthumbDir(self):
+        s = QgsSettings()
+        dir = self.lineEdit_Thumb_path.text()
+        if os.path.exists(dir):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
+        else:
+            QMessageBox.warning(self, "INFO", "Directory not found",
+                                QMessageBox.Ok)
+    
+    def openresizeDir(self):
+        s = QgsSettings()
+        dir = self.lineEdit_Thumb_resize.text()
+        if os.path.exists(dir):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
+        else:
+            QMessageBox.warning(self, "INFO", "Directory not found",
+                                QMessageBox.Ok)
     
     def on_pushButton_connect_pressed(self):
         
@@ -1427,19 +1748,26 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
         
        
         
-  
-        cnopts = pysftp.CnOpts()
-        cnopts.hostkeys = None 
-        srv = pysftp.Connection(host=self.ip, username=self.user, password=self.pwd,cnopts =cnopts )
-        self.lineEdit_2.insert("Connection succesfully stablished ......... ")
-        dirlist = []
-        dirlist = srv.listdir()
-        for item in dirlist:
-            self.listWidget.insertItem(0,item)
+        try: 
+            ftp = FTP(self.ip)
+            a = ftp.login(self.user, self.pwd)
+            if bool(a):
+                self.lineEdit_2.insert("Connection succesfully stablished ......... ")
+                dirlist = ftp.cwd('/')
+        
+                self.listWidget.insertItem(0,dirlist)
+                
+            else:
+                self.lineEdit_2.insert("Errore di connessione ......... ")
+                
+        except:
+            self.lineEdit_2.insert("Errore di connessione ......... ")
         
         
-        # Download the file from the remote server
-        #remote_file = '/home/data/ftp/demoliz/qgis/rep5/test.qgs'
+        
+        
+        # #Download the file from the remote server
+        # remote_file = '/home/data/ftp/demoliz/qgis/rep5/test.qgs'
         
         # with srv.cd('../'):             # still in .
             # srv.chdir('home')    # now in ./static
@@ -1452,7 +1780,7 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
             # self.listWidget.insertItem(0,"--------------------------------------------")
             
         
-        #srv.close()
+        # srv.close()
     # def loginServer():
         # # user = ent_login.get()
         # # password = ent_pass.get()
@@ -1479,33 +1807,33 @@ class pyArchInitDialog_Config(QDialog, MAIN_DIALOG_CLASS):
             # libox_serverdir.insert(0, item)
 
     # #FTP commands
-    def on_pushButton_change_dir_pressed(self):
-        cnopts = pysftp.CnOpts()
-        cnopts.hostkeys = None 
-        with pysftp.Connection(host="37.139.2.71", username="root",
-        password="lizmap1",cnopts =cnopts ) as sftp:
+    # def on_pushButton_change_dir_pressed(self):
+        # cnopts = pysftp.CnOpts()
+        # cnopts.hostkeys = None 
+        # with pysftp.Connection(host="ftp.adarteifo.it", username="adarteinfo",
+        # password="adarteinfo",cnopts =cnopts ) as sftp:
         
-            try:
-                msg = sftp.cwd('/home') # Switch to a remote directory
+            # try:
+                # msg = sftp.cwd('/home') # Switch to a remote directory
 
-                directory_structure = sftp.listdir_attr()# Obtain structure of the remote directory 
+                # directory_structure = sftp.listdir_attr()# Obtain structure of the remote directory 
 
-                for attr in directory_structure:
-                    self.listWidget.insertItem(attr.filename, attr)
+                # for attr in directory_structure:
+                    # self.listWidget.insertItem(attr.filename, attr)
 
-            except:
-                self.lineEdit_2.insert("\n")
-                self.lineEdit_2.insert("Unable to change directory")
-            dirlist = []
-            dirlist = sftp.listdir()
-            for item in dirlist:
-                self.listWidget.insertItem(0,item)
+            # except:
+                # self.lineEdit_2.insert("\n")
+                # self.lineEdit_2.insert("Unable to change directory")
+            # dirlist = []
+            # dirlist = sftp.listdir()
+            # for item in dirlist:
+                # self.listWidget.insertItem(0,item)
 
 
-    def on_pushButton_disconnect_pressed(self):
+    # def on_pushButton_disconnect_pressed(self):
         
-       cnopts = pysftp.CnOpts()
-       cnopts.hostkeys = None 
-       srv = pysftp.Connection(host=self.ip, username=self.user, password=self.pwd,cnopts =cnopts )
-       self.lineEdit_2.insert("Connection Close ............. ")
-       srv.close()
+       # cnopts = pysftp.CnOpts()
+       # cnopts.hostkeys = None 
+       # srv = pysftp.Connection(host=self.ip, username=self.user, password=self.pwd,cnopts =cnopts )
+       # self.lineEdit_2.insert("Connection Close ............. ")
+       # srv.close()
